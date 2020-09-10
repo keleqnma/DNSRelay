@@ -1,9 +1,6 @@
 package common
 
-import (
-	"bytes"
-	"encoding/binary"
-)
+const stopByte = 0x00
 
 func Pack(args ...int8) []byte {
 	ret := []byte{}
@@ -26,51 +23,43 @@ func UnPack(data []byte) []int8 {
 
 func Int8ToBytes2(num int8) []byte {
 	m := int32(num)
-	bytesBuffer := bytes.NewBuffer([]byte{})
-	binary.Write(bytesBuffer, binary.BigEndian, m) //nolint: errcheck
-
-	gbyte := bytesBuffer.Bytes()
-	k := 2
-	x := len(gbyte)
-	nb := make([]byte, k)
-	for i := 0; i < k; i++ {
-		nb[i] = gbyte[x-i-1]
-	}
-	return nb
+	var res []byte
+	res = append(res, byte((m>>8)&0xFF))
+	res = append(res, byte((m)&0xFF))
+	return res
 }
 
 func IntToBytes(num int) []byte {
 	m := int32(num)
-	bytesBuffer := bytes.NewBuffer([]byte{})
-	binary.Write(bytesBuffer, binary.BigEndian, m) //nolint: errcheck
-
-	gbyte := bytesBuffer.Bytes()
-	k := 4
-	x := len(gbyte)
-	nb := make([]byte, k)
-	for i := 0; i < k; i++ {
-		nb[i] = gbyte[x-i-1]
-	}
-	return nb
+	var res []byte
+	res = append(res, byte((m>>24)&0xFF))
+	res = append(res, byte((m>>16)&0xFF))
+	res = append(res, byte((m>>8)&0xFF))
+	res = append(res, byte((m)&0xFF))
+	return res
 }
 
 func BytesToInt8(b []byte) int8 {
-	var xx []byte
-	if len(b) == 2 {
-		xx = []byte{b[0], b[1], 0, 0}
-	} else {
-		xx = b
+	return int8(((b[0] & 0xff) << 8) | (b[1] & 0xff))
+}
+
+func DomainToBytes(domain string) []byte {
+	var res []byte
+	// nums := strings.Split(domain, ".")
+	// for index := range nums {
+	// 	res = append(res, []byte(nums[index])...)
+	// }
+	res = append(res, []byte(domain)...)
+	res = append(res, stopByte)
+	return res
+}
+
+func BytesToDomain(data []byte) (int, string) {
+	var res string
+	var index int
+	for index = 0; index < len(data) && data[index] != stopByte; index++ {
+		res += string(data[index])
 	}
-
-	m := len(xx)
-	nb := make([]byte, 4)
-	for i := 0; i < 4; i++ {
-		nb[i] = xx[m-i-1]
-	}
-	bytesBuffer := bytes.NewBuffer(nb)
-
-	var x int32
-	binary.Read(bytesBuffer, binary.BigEndian, &x) //nolint: errcheck
-
-	return int8(x)
+	index++
+	return index, res
 }

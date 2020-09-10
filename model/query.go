@@ -10,7 +10,6 @@ const (
 	HOST_QUERY_TYPE = 1
 	QUERY_PACK_NUM  = 2
 	dotByte         = 32
-	stopByte        = 0x00
 )
 
 /**
@@ -46,14 +45,8 @@ func NewDNSQuery(QName string, QType int8, QClass int8) (dnsQuery *DNSQuery) {
 func UnPackDNSQuery(data []byte) (dnsQuery *DNSQuery, err error) {
 	dnsQuery = &DNSQuery{}
 	nameLength := 0
-	for ; data[nameLength] != stopByte; nameLength++ {
-		if data[nameLength] < dotByte {
-			dnsQuery.QName += "."
-		} else {
-			dnsQuery.QName += string(data[nameLength])
-		}
-	}
-	nums := common.UnPack(data[nameLength+1:])
+	nameLength, dnsQuery.QName = common.BytesToDomain(data)
+	nums := common.UnPack(data[nameLength:])
 	if len(nums) != QUERY_PACK_NUM {
 		err = errors.New("dns header 解析失败")
 	}
@@ -62,8 +55,7 @@ func UnPackDNSQuery(data []byte) (dnsQuery *DNSQuery, err error) {
 }
 
 func (dnsQuery *DNSQuery) PackDNSQuery() (data []byte) {
-	data = append(data, []byte(dnsQuery.QName)...)
-	data = append(data, stopByte)
+	data = append(data, common.DomainToBytes(dnsQuery.QName)...)
 	data = append(data, common.Pack(dnsQuery.QType, dnsQuery.QClass)...)
 	return
 }
