@@ -7,9 +7,8 @@ import (
 )
 
 const (
-	HOST_QUERY_TYPE = 1
+	IPV4_QUERY_TYPE = 1
 	QUERY_PACK_NUM  = 2
-	dotByte         = 32
 )
 
 /**
@@ -30,13 +29,13 @@ type DNSQuery struct {
 	QName string
 
 	/* QTYPE（2字节） */
-	QType int8
+	QType int16
 
 	/* QCLASS（2字节） */
-	QClass int8
+	QClass int16
 }
 
-func NewDNSQuery(QName string, QType int8, QClass int8) (dnsQuery *DNSQuery) {
+func NewDNSQuery(QName string, QType int16, QClass int16) (dnsQuery *DNSQuery) {
 	dnsQuery = &DNSQuery{}
 	dnsQuery.QName, dnsQuery.QType, dnsQuery.QClass = QName, QType, QClass
 	return dnsQuery

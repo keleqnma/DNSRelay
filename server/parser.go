@@ -16,29 +16,6 @@ type ParserServer struct {
 	queryReceived  *model.DNSQuery
 }
 
-const (
-	UDP_NETWORK = "udp4"
-	TRANS_PORT  = 53
-
-	AN_COUNT_INIT = 1
-	NS_COUNT_INIT = 1
-	AR_COUNT_INIT = 0
-
-	RR_NAME_INIT   = 0x00c
-	RR_TTL_INIT    = 3600 * 24
-	RR_RD_LEN_INIT = 4
-
-	RR_AUTHOR_RD_LEN_INIT = 0
-	RR_AUTHOR_TYPE_INIT   = 6
-)
-
-var (
-	TRANS_ADDR = &net.UDPAddr{
-		IP:   net.IPv4(114, 114, 114, 114),
-		Port: TRANS_PORT,
-	}
-)
-
 func GetParserServer(data []byte, addr *net.UDPAddr) (*ParserServer, error) {
 	var err error
 	parserServer := &ParserServer{}
@@ -84,24 +61,38 @@ func (parserServer *ParserServer) searchLocal() (ok bool) {
 		dnsRRNameServer *model.DNSRR
 	)
 	ipSearch, ok := dnsServer.DomainMap[parserServer.queryReceived.QName]
-	if !ok || parserServer.queryReceived.QType != model.HOST_QUERY_TYPE {
+	if !ok || parserServer.queryReceived.QType != model.IPV4_QUERY_TYPE {
 		ok = false
 		return
 	}
 
-	var flag int8
+	var flag int
+	if _, ok := dnsServer.BlockedIP[ipSearch]; ok {
+		flag = model.ERROR_FLAG
+	} else {
+		flag = model.SUCCESS_FLAG
+	}
+
 	dnsHeaderResp = model.NewDNSHeader(parserServer.headerReceived.ID, flag, parserServer.headerReceived.QDCount, AN_COUNT_INIT, NS_COUNT_INIT, AR_COUNT_INIT)
 	respData = append(respData, dnsHeaderResp.PackDNSHeader()...)
 
 	dnsQueryResp = parserServer.queryReceived
 	respData = append(respData, dnsQueryResp.PackDNSQuery()...)
 
-	dnsRRResp = model.NewDNSRR(RR_NAME_INIT, parserServer.queryReceived.QType, parserServer.queryReceived.QClass, RR_TTL_INIT, RR_RD_LEN_INIT)
-	dnsRRNameServer.RData = ipSearch
-	respData = append(respData, dnsRRResp.Pack()...)
+	dnsRRResp = model.NewDNSRR(RR_NAME_INIT, parserServer.queryReceived.QType, parserServer.queryReceived.QClass, RR_TTL_INIT, RR_RD_LEN_INIT, ipSearch)
+	dnsRRRespData, err := dnsRRResp.Pack()
+	if err != nil {
+		log.Printf("Invalid dnsRRResp format;%v", err)
+	}
+	respData = append(respData, dnsRRRespData...)
 
-	dnsRRNameServer = model.NewDNSRR(RR_NAME_INIT, RR_AUTHOR_TYPE_INIT, parserServer.queryReceived.QClass, RR_TTL_INIT, RR_AUTHOR_RD_LEN_INIT)
-	respData = append(respData, dnsRRNameServer.Pack()...)
+	dnsRRNameServer = model.NewDNSRR(RR_NAME_INIT, RR_AUTHOR_TYPE_INIT, parserServer.queryReceived.QClass, RR_TTL_INIT, RR_AUTHOR_RD_LEN_INIT, "")
+	dnsRRNameServerData, err := dnsRRNameServer.Pack()
+	if err != nil {
+		log.Printf("Invalid dnsRRNameServer format;%v", err)
+	}
+	respData = append(respData, dnsRRNameServerData...)
+
 	log.Printf("Local search responce data：%v", respData)
 
 	code, err := GetDNSServer().socket.WriteToUDP(respData, parserServer.clientAddr)

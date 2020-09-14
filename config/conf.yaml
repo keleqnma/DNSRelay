@@ -1,9 +1,11 @@
 dns_relay:
-   client_ip: 1,1,1,1
+   client_ip: [1,1,1,1]
    client_port: 53
-   tranport_ip: 114,114,114,114
-   tranport_port: 53
-
 
 domain_map:
    localhost: 0.0.0.1
+   www.test-block.com: 123.155.123.123
+
+blocked_ip: 
+   - "0.0.0.0"
+   - "123.155.123.123"
