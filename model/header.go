@@ -1,8 +1,6 @@
 package model
 
 import (
-	"errors"
-
 	"dnsrelay.com/v1/common"
 )
 
@@ -32,44 +30,37 @@ const (
 */
 type DNSHeader struct {
 	/* 会话标识（2字节）*/
-	ID int16
+	ID int
 
 	/* Flags（2字节）*/
 	Flags int
 
 	/* QDCOUNT（2字节）*/
-	QDCount int16
+	QDCount int
 
 	/* ANCOUNT（2字节）*/
-	ANCount int16
+	ANCount int
 
 	/* NSCOUNT（2字节）*/
-	NSCount int16
+	NSCount int
 
 	/* ARCOUNT（2字节）*/
-	ARCount int16
+	ARCount int
 }
 
-func NewDNSHeader(ID int16, Flags int, QDCount int16, ANCount int16, NSCount int16, ARCount int16) (dnsHeader *DNSHeader) {
+func NewDNSHeader(ID int, Flags int, QDCount int, ANCount int, NSCount int, ARCount int) (dnsHeader *DNSHeader) {
 	dnsHeader = &DNSHeader{}
 	dnsHeader.ID, dnsHeader.Flags, dnsHeader.QDCount, dnsHeader.ANCount, dnsHeader.NSCount, dnsHeader.ARCount = ID, Flags, QDCount, ANCount, NSCount, ARCount
 	return
 }
 
-func UnPackDNSHeader(data []byte) (dnsHeader *DNSHeader, err error) {
-	id := common.BytesToInt16(data[:2])
-	flag := common.BytesToInt(data[2:4])
-	nums := common.UnPack(data[4:])
-	if len(nums) != HEADER_PACK_NUM {
-		err = errors.New("dns header 解析失败")
-	}
-	dnsHeader = NewDNSHeader(id, flag, nums[0], nums[1], nums[2], nums[3])
-	return dnsHeader, err
+func UnPackDNSHeader(data []byte) (dnsHeader *DNSHeader) {
+	nums := common.UnPack(data)
+	dnsHeader = NewDNSHeader(nums[0], nums[1], nums[2], nums[3], nums[4], nums[5])
+	return dnsHeader
 }
 
 func (dnsHeader *DNSHeader) PackDNSHeader() (data []byte) {
-	data = common.Pack(dnsHeader.ID)
-	data = append(data, common.IntToBytes2(dnsHeader.Flags)...)
-	data = append(data, common.Pack(dnsHeader.QDCount, dnsHeader.ANCount, dnsHeader.NSCount, dnsHeader.ARCount)...)
+	data = common.Pack(dnsHeader.ID, dnsHeader.Flags, dnsHeader.QDCount, dnsHeader.ANCount, dnsHeader.NSCount, dnsHeader.ARCount)
 	return
 }

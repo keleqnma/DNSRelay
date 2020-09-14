@@ -8,31 +8,23 @@ import (
 
 const stopByte = 0x00
 
-func Pack(args ...int16) []byte {
+func Pack(args ...int) []byte {
 	ret := []byte{}
 	for i := range args {
-		ret = append(ret, Int16ToBytes2(args[i])...)
+		ret = append(ret, IntToBytes2(args[i])...)
 	}
 	return ret
 }
 
-func UnPack(data []byte) []int16 {
-	ret := []int16{}
+func UnPack(data []byte) []int {
+	ret := []int{}
 	remainLen := len(data)
 	for remainLen >= 2 {
-		ret = append(ret, BytesToInt16(data[0:2]))
+		ret = append(ret, BytesToInt(data[0:2]))
 		remainLen -= 2
 		data = data[2:]
 	}
 	return ret
-}
-
-func Int16ToBytes2(num int16) []byte {
-	m := int32(num)
-	var res []byte
-	res = append(res, byte((m>>8)&0xFF))
-	res = append(res, byte((m)&0xFF))
-	return res
 }
 
 func IntToBytes4(num int) []byte {
@@ -54,11 +46,9 @@ func IntToBytes2(num int) []byte {
 }
 
 func BytesToInt(b []byte) int {
-	return int(((b[0] & 0xff) << 8) | (b[1] & 0xff))
-}
-
-func BytesToInt16(b []byte) int16 {
-	return int16(((b[0] & 0xff) << 8) | (b[1] & 0xff))
+	byte1 := int(b[0] & 0xff) << 8
+	byte2 := int(b[1] & 0xff)
+	return byte1|byte2
 }
 
 func DomainToBytes(domain string) []byte {

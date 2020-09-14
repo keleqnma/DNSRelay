@@ -20,16 +20,19 @@ func GetDNSServer() *DNSServer {
 		return dnsServer
 	}
 	var err error
-	dnsServer = &DNSServer{}
+	dnsServer = &DNSServer{
+		DomainMap: make(map[string]string),
+		BlockedIP: make(map[string]interface{}),
+	}
 	dnsServer.DomainMap = viper.GetStringMapString("domain_map")
 	blockedIPs := viper.GetStringSlice("blocked_ip")
 	for index := range blockedIPs {
 		dnsServer.BlockedIP[blockedIPs[index]] = struct{}{}
 	}
-	clientIP := viper.GetIntSlice("dns_relay.client_ip")
+
 	dnsServer.socket, err = net.ListenUDP(UDP_NETWORK, &net.UDPAddr{
-		IP:   net.IPv4(byte(clientIP[0]), byte(clientIP[1]), byte(clientIP[2]), byte(clientIP[3])),
-		Port: viper.GetInt("dns_relay.client_port"),
+		IP:   net.ParseIP(viper.GetString("dns_relay.client_ip")),
+		Port: 53,
 	})
 	if err != nil {
 		log.Printf("配置错误：%v", err)
@@ -37,13 +40,19 @@ func GetDNSServer() *DNSServer {
 	}
 
 	log.Printf("本地共%v条数据\n", len(dnsServer.DomainMap))
-	log.Println(dnsServer.DomainMap)
-
+	for k, v := range dnsServer.DomainMap {
+		log.Printf("域名：%v，对应IP：%v", k, v)
+	}
+	log.Printf("本地共%v条屏蔽ip\n", len(dnsServer.BlockedIP))
+	for k := range dnsServer.BlockedIP {
+		log.Printf("屏蔽ip：%v", k)
+	}
+	log.Println(dnsServer.socket.LocalAddr())
 	return dnsServer
 }
 
 func (dnsServer *DNSServer) Serve() {
-	var data []byte
+	data := make([]byte, 1024)
 	for {
 		read, remoteAddr, err := dnsServer.socket.ReadFromUDP(data)
 		if err != nil {

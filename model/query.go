@@ -29,13 +29,13 @@ type DNSQuery struct {
 	QName string
 
 	/* QTYPE（2字节） */
-	QType int16
+	QType int
 
 	/* QCLASS（2字节） */
-	QClass int16
+	QClass int
 }
 
-func NewDNSQuery(QName string, QType int16, QClass int16) (dnsQuery *DNSQuery) {
+func NewDNSQuery(QName string, QType int, QClass int) (dnsQuery *DNSQuery) {
 	dnsQuery = &DNSQuery{}
 	dnsQuery.QName, dnsQuery.QType, dnsQuery.QClass = QName, QType, QClass
 	return dnsQuery
@@ -46,7 +46,7 @@ func UnPackDNSQuery(data []byte) (dnsQuery *DNSQuery, err error) {
 	nameLength := 0
 	nameLength, dnsQuery.QName = common.BytesToDomain(data)
 	nums := common.UnPack(data[nameLength:])
-	if len(nums) != QUERY_PACK_NUM {
+	if len(nums) <= QUERY_PACK_NUM {
 		err = errors.New("dns header 解析失败")
 	}
 	dnsQuery.QType, dnsQuery.QClass = nums[0], nums[1]
