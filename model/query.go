@@ -46,8 +46,8 @@ func UnPackDNSQuery(data []byte) (dnsQuery *DNSQuery, err error) {
 	nameLength := 0
 	nameLength, dnsQuery.QName = common.BytesToDomain(data)
 	nums := common.UnPack(data[nameLength:])
-	if len(nums) <= QUERY_PACK_NUM {
-		err = errors.New("dns header 解析失败")
+	if len(nums) < QUERY_PACK_NUM {
+		err = errors.New("dns query 解析失败")
 	}
 	dnsQuery.QType, dnsQuery.QClass = nums[0], nums[1]
 	return dnsQuery, err

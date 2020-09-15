@@ -9,8 +9,7 @@ import (
 )
 
 type ParserServer struct {
-	transSocket *net.UDPConn
-	clientAddr  *net.UDPAddr
+	clientAddr *net.UDPAddr
 
 	dataReceived   []byte
 	headerReceived *model.DNSHeader
@@ -27,7 +26,6 @@ func GetParserServer(data []byte, addr *net.UDPAddr) (*ParserServer, error) {
 
 func (parserServer *ParserServer) parse() (err error) {
 	parserServer.headerReceived = model.UnPackDNSHeader(parserServer.dataReceived[:model.HEADER_LENGTH])
-	log.Printf("receive header:%v, unpacked header:%v\n", parserServer.dataReceived[:model.HEADER_LENGTH], parserServer.headerReceived)
 	if parserServer.headerReceived.QDCount <= 0 {
 		log.Printf("Header received %v length error\n", parserServer.headerReceived)
 		return
@@ -37,7 +35,6 @@ func (parserServer *ParserServer) parse() (err error) {
 		log.Printf("Query unpacked failed : %v\n", err)
 		return
 	}
-	log.Printf("receive query:%v, unpacked query:%v\n", parserServer.dataReceived[model.HEADER_LENGTH:], parserServer.queryReceived)
 
 	if ok := parserServer.searchLocal(); ok {
 		return
@@ -45,22 +42,20 @@ func (parserServer *ParserServer) parse() (err error) {
 
 	parserServer.searchInternet()
 
-	if parserServer.transSocket != nil {
-		defer parserServer.transSocket.Close()
-	}
 	return
 }
 
 func (parserServer *ParserServer) searchLocal() (ok bool) {
 	var (
-		respData        []byte
-		dnsHeaderResp   *model.DNSHeader
-		dnsQueryResp    *model.DNSQuery
-		dnsRRResp       *model.DNSRR
-		dnsRRNameServer *model.DNSRR
+		respData      []byte
+		dnsHeaderResp *model.DNSHeader
+		dnsQueryResp  *model.DNSQuery
+		dnsRRResp     *model.DNSRR
 	)
+	log.Printf("Search local server for domian：%s\n", parserServer.queryReceived.QName)
 	ipSearch, ok := dnsServer.DomainMap[parserServer.queryReceived.QName]
 	if !ok || parserServer.queryReceived.QType != model.IPV4_QUERY_TYPE {
+		log.Printf("Search local server for domian：%s not found.\n", parserServer.queryReceived.QName)
 		ok = false
 		return
 	}
@@ -89,17 +84,13 @@ func (parserServer *ParserServer) searchLocal() (ok bool) {
 			log.Printf("Invalid dnsRRResp format;%v", err)
 		}
 		respData = append(respData, dnsRRRespData...)
-
-		dnsRRNameServer = model.NewDNSRR(RR_NAME_INIT, RR_AUTHOR_TYPE_INIT, parserServer.queryReceived.QClass, RR_TTL_INIT, RR_AUTHOR_RD_LEN_INIT)
-		dnsRRNameServerData, _ := dnsRRNameServer.Pack()
-		respData = append(respData, dnsRRNameServerData...)
-
 		log.Printf("Search local server done. domian：%s，ip searched：%s\n", parserServer.queryReceived.QName, ipSearch)
+	} else {
+		log.Printf("Search local server done. domian：%s，ip blocked：%s\n", parserServer.queryReceived.QName, ipSearch)
 	}
 
-	log.Printf("Local search responce data：%v", respData)
-	log.Println(dnsHeaderResp, dnsQueryResp, dnsRRResp, dnsRRNameServer)
 	code, err := GetDNSServer().socket.WriteToUDP(respData, parserServer.clientAddr)
+	log.Printf("Local search server send code:%v, data：%v", code, respData)
 	if err != nil {
 		log.Printf("Local server write error:%v, code %v \n", err, code)
 	}
@@ -114,31 +105,36 @@ func (parserServer *ParserServer) searchInternet() {
 	dataTrans := make([]byte, 1024)
 	log.Printf("Search net server for domian：%s\n", parserServer.queryReceived.QName)
 
-	parserServer.transSocket, err = net.ListenUDP(UDP_NETWORK, &net.UDPAddr{Port: 0})
+	dstServer := &net.UDPAddr{
+		IP:   net.ParseIP(viper.GetString("dns_relay.trans_ip")),
+		Port: 53,
+	}
+	srcServer := &net.UDPAddr{IP: net.IPv4zero, Port: 0}
+
+	conn, err := net.DialUDP(UDP_NETWORK, srcServer, dstServer)
 	if err != nil {
 		log.Panicf("Net server Listen error：%v", err)
 		return
 	}
 
-	code, err = parserServer.transSocket.WriteToUDP(parserServer.dataReceived, &net.UDPAddr{
-		IP:   net.ParseIP(viper.GetString("dns_relay.trans_ip")),
-		Port: 53,
-	})
-	log.Printf("send data to transport server, code:%v\n", code)
+	code, err = conn.Write(parserServer.dataReceived)
+	log.Printf("send data to transport server:%v , code:%v\n", dstServer, code)
 	if err != nil {
 		log.Printf("Net server write error:%v, code %v \n", err, code)
 		return
 	}
 
-	code, _, err = parserServer.transSocket.ReadFromUDP(dataTrans)
+	code, err = conn.Read(dataTrans)
 	if err != nil {
 		log.Printf("Net server read error:%v, code %v \n", err, code)
 		return
 	}
+	dataTrans = dataTrans[:code]
 
 	code, err = dnsServer.socket.WriteToUDP(dataTrans, parserServer.clientAddr)
 	if err != nil {
 		log.Printf("Net server write error:%v, code %v \n", err, code)
 	}
+	log.Printf("Search net server send code：%v, data: %v \n", code, dataTrans)
 	log.Printf("Search net server for domian：%s done\n", parserServer.queryReceived.QName)
 }

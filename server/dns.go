@@ -47,18 +47,18 @@ func GetDNSServer() *DNSServer {
 	for k := range dnsServer.BlockedIP {
 		log.Printf("屏蔽ip：%v", k)
 	}
-	log.Println(dnsServer.socket.LocalAddr())
 	return dnsServer
 }
 
 func (dnsServer *DNSServer) Serve() {
-	data := make([]byte, 1024)
 	for {
+		data := make([]byte, 1024)
 		read, remoteAddr, err := dnsServer.socket.ReadFromUDP(data)
 		if err != nil {
 			log.Println("接收数据错误", err)
 			continue
 		}
+		data = data[:read]
 		parserServer, err := GetParserServer(data, remoteAddr)
 		log.Println("接收数据成功", read, remoteAddr, data)
 		if err != nil {

@@ -5,6 +5,7 @@ dns_relay:
 domain_map:
    localhost: 0.0.0.1
    test.com: 1.2.3.4
+   test-block.com: 0.0.0.0
    www.test-block.com: 123.155.123.123
 
 blocked_ip: 

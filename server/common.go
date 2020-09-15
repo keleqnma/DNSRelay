@@ -5,10 +5,10 @@ const (
 
 	AN_SUC_COUNT_INIT  = 1
 	AN_FAIL_COUNT_INIT = 0
-	NS_COUNT_INIT      = 1
+	NS_COUNT_INIT      = 0
 	AR_COUNT_INIT      = 0
 
-	RR_NAME_INIT   = 0x00c
+	RR_NAME_INIT   = 49164
 	RR_TTL_INIT    = 3600 * 24
 	RR_RD_LEN_INIT = 4
 
