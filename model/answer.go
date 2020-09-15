@@ -2,6 +2,11 @@ package model
 
 import "dnsrelay.com/v1/common"
 
+const (
+	IPV4_ANSWER_LEANGTH = 16
+	IPV4_RDATA_LENGTH   = 4
+)
+
 /**
 	   0  1  2  3  4  5  6  7  0  1  2  3  4  5  6  7
 	  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+

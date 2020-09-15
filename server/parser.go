@@ -1,8 +1,10 @@
 package server
 
 import (
+	"context"
 	"log"
 	"net"
+	"strconv"
 
 	"dnsrelay.com/v1/model"
 	"github.com/spf13/viper"
@@ -16,6 +18,8 @@ type ParserServer struct {
 	queryReceived  *model.DNSQuestion
 }
 
+var ctx = context.Background()
+
 func GetParserServer(data []byte, addr *net.UDPAddr) (*ParserServer, error) {
 	var err error
 	parserServer := &ParserServer{}
@@ -26,6 +30,7 @@ func GetParserServer(data []byte, addr *net.UDPAddr) (*ParserServer, error) {
 
 func (parserServer *ParserServer) parse() (err error) {
 	parserServer.headerReceived = model.UnPackDNSHeader(parserServer.dataReceived[:model.HEADER_LENGTH])
+	defer log.Println("-----------------------------------------------------")
 	if parserServer.headerReceived.QDCount <= 0 {
 		log.Printf("Header received %v length error\n", parserServer.headerReceived)
 		return
@@ -36,7 +41,7 @@ func (parserServer *ParserServer) parse() (err error) {
 		return
 	}
 
-	if ok := parserServer.searchLocal(); ok {
+	if parserServer.queryReceived.QType == model.HOST_QUERY_TYPE && parserServer.searchLocal() {
 		return
 	}
 
@@ -53,43 +58,55 @@ func (parserServer *ParserServer) searchLocal() (ok bool) {
 		dnsAnswerResp   *model.DNSAnswer
 	)
 	log.Printf("Search local server for domian：%s\n", parserServer.queryReceived.QName)
-	ipSearch, ok := dnsServer.DomainMap[parserServer.queryReceived.QName]
-	if !ok || parserServer.queryReceived.QType != model.HOST_QUERY_TYPE {
-		log.Printf("Search local server for domian：%s not found.\n", parserServer.queryReceived.QName)
-		ok = false
+	searchKey := DNS_PROXY_REDIS_SPACE + parserServer.queryReceived.QName
+	ipSearchs, err := dnsServer.RedisClient.SMembers(ctx, searchKey).Result()
+	if err != nil {
+		return
+	}
+	if len(ipSearchs) == 0 {
+		log.Printf("Search local server for domian：%s not found, err:%v.\n", parserServer.queryReceived.QName, err)
 		return
 	}
 
+	for index := range ipSearchs {
+		_, ok = dnsServer.BlockedIP.Load(ipSearchs[index])
+		if ok {
+			break
+		}
+	}
+
 	var flag int
-	if _, ok := dnsServer.BlockedIP[ipSearch]; ok {
+	if ok {
 		flag = model.FAIL_FLAG
 		dnsHeaderResp = model.NewDNSHeader(parserServer.headerReceived.ID, flag, parserServer.headerReceived.QDCount, AN_FAIL_COUNT_INIT, NS_COUNT_INIT, AR_COUNT_INIT)
-		log.Printf("Search local server done. domian：%s，ip blocked：%s\n", parserServer.queryReceived.QName, ipSearch)
+		log.Printf("Search local server done. domian：%s，ip blocked：%s\n", parserServer.queryReceived.QName, ipSearchs)
 	} else {
 		flag = model.SUCCESS_FLAG
-		dnsHeaderResp = model.NewDNSHeader(parserServer.headerReceived.ID, flag, parserServer.headerReceived.QDCount, AN_SUC_COUNT_INIT, NS_COUNT_INIT, AR_COUNT_INIT)
-		log.Printf("Search local server done. domian：%s，ip searched：%s\n", parserServer.queryReceived.QName, ipSearch)
+		dnsHeaderResp = model.NewDNSHeader(parserServer.headerReceived.ID, flag, parserServer.headerReceived.QDCount, len(ipSearchs), NS_COUNT_INIT, AR_COUNT_INIT)
+		log.Printf("Search local server done. domian：%s，ip searched：%s\n", parserServer.queryReceived.QName, ipSearchs)
 	}
 	respData = append(respData, dnsHeaderResp.PackDNSHeader()...)
 
 	dnsQuestionResp = parserServer.queryReceived
 	respData = append(respData, dnsQuestionResp.PackDNSQuestion()...)
 
-	dnsAnswerResp = model.NewDNSAnswer(ANSWER_NAME_INIT, parserServer.queryReceived.QType, parserServer.queryReceived.QClass, ANSWER_TTL_INIT, ANSWER_RD_LEN_INIT, ipSearch)
-	respData = append(respData, dnsAnswerResp.Pack()...)
+	for index := range ipSearchs {
+		dnsAnswerResp = model.NewDNSAnswer(ANSWER_NAME_INIT, parserServer.queryReceived.QType, parserServer.queryReceived.QClass, ANSWER_TTL_INIT, ANSWER_RD_LEN_INIT, ipSearchs[index])
+		respData = append(respData, dnsAnswerResp.Pack()...)
+	}
 
-	code, err := GetDNSServer().socket.WriteToUDP(respData, parserServer.clientAddr)
-	log.Printf("Local search server send code:%v, data：%v", code, respData)
+	length, err := GetDNSServer().socket.WriteToUDP(respData, parserServer.clientAddr)
+	log.Printf("Local search server send length:%v, data：%v", length, respData)
 	if err != nil {
-		log.Printf("Local server write error:%v, code %v \n", err, code)
+		log.Printf("Local server write error:%v, length %v \n", err, length)
 	}
 	return true
 }
 
 func (parserServer *ParserServer) searchInternet() {
 	var (
-		code int
-		err  error
+		length int
+		err    error
 	)
 	dataTrans := make([]byte, 1024)
 	log.Printf("Search net server for domian：%s\n", parserServer.queryReceived.QName)
@@ -106,28 +123,52 @@ func (parserServer *ParserServer) searchInternet() {
 		return
 	}
 
-	code, err = conn.Write(parserServer.dataReceived)
-	log.Printf("send data to transport server:%v , code:%v\n", dstServer, code)
+	length, err = conn.Write(parserServer.dataReceived)
+	log.Printf("send data to transport server:%v , length:%v\n", dstServer, length)
 	if err != nil {
-		log.Printf("Net server write error:%v, code %v \n", err, code)
+		log.Printf("Net server write error:%v, length %v \n", err, length)
 		return
 	}
 
-	code, err = conn.Read(dataTrans)
+	length, err = conn.Read(dataTrans)
 	if err != nil {
-		log.Printf("Net server read error:%v, code %v \n", err, code)
+		log.Printf("Net server read error:%v, length %v \n", err, length)
 		return
 	}
-	dataTrans = dataTrans[:code]
-
+	dataTrans = dataTrans[:length]
 	if conn != nil {
 		defer conn.Close()
 	}
 
-	code, err = dnsServer.socket.WriteToUDP(dataTrans, parserServer.clientAddr)
-	if err != nil {
-		log.Printf("Net server write error:%v, code %v \n", err, code)
+	dataSend := dataTrans
+
+	if parserServer.queryReceived.QType == model.HOST_QUERY_TYPE {
+		key := DNS_PROXY_REDIS_SPACE + parserServer.queryReceived.QName
+		sendSize := len(parserServer.dataReceived)
+		dataTrans = dataTrans[sendSize:]
+		var values []string
+
+		for len(dataTrans) >= model.IPV4_ANSWER_LEANGTH {
+			dataTrans = dataTrans[(model.IPV4_ANSWER_LEANGTH - model.IPV4_RDATA_LENGTH):]
+			var ip string
+			for index := 0; index < model.IPV4_RDATA_LENGTH; index++ {
+				ip += strconv.Itoa(int(dataTrans[index]))
+				ip += "."
+			}
+			values = append(values, ip[:len(ip)-1])
+			dataTrans = dataTrans[model.IPV4_RDATA_LENGTH:]
+		}
+		if err := dnsServer.RedisClient.SAdd(ctx, key, values).Err(); err != nil {
+			log.Printf("write to local database error: %v.", err)
+		} else {
+			log.Printf("write to local database success, domain:%v, ips:%v.", parserServer.queryReceived.QName, values)
+		}
 	}
-	log.Printf("Search net server send code：%v, data: %v \n", code, dataTrans)
+
+	length, err = dnsServer.socket.WriteToUDP(dataSend, parserServer.clientAddr)
+	if err != nil {
+		log.Printf("Net server write error:%v, length %v \n", err, length)
+	}
+	log.Printf("Search net server send length：%v, data: %v \n", length, dataSend)
 	log.Printf("Search net server for domian：%s done\n", parserServer.queryReceived.QName)
 }

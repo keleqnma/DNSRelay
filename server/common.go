@@ -1,8 +1,9 @@
 package server
 
 const (
-	UDP_NETWORK = "udp4"
-	DNS_PORT    = 53
+	DNS_PROXY_REDIS_SPACE = "dnsproxy:"
+	UDP_NETWORK           = "udp4"
+	DNS_PORT              = 53
 
 	AN_SUC_COUNT_INIT  = 1
 	AN_FAIL_COUNT_INIT = 1

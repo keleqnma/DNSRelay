@@ -46,9 +46,9 @@ func IntToBytes2(num int) []byte {
 }
 
 func BytesToInt(b []byte) int {
-	byte1 := int(b[0] & 0xff) << 8
+	byte1 := int(b[0]&0xff) << 8
 	byte2 := int(b[1] & 0xff)
-	return byte1|byte2
+	return byte1 | byte2
 }
 
 func DomainToBytes(domain string) []byte {
