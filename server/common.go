@@ -5,8 +5,7 @@ const (
 	UDP_NETWORK           = "udp4"
 	DNS_PORT              = 53
 
-	AN_SUC_COUNT_INIT  = 1
-	AN_FAIL_COUNT_INIT = 1
+	AN_FAIL_COUNT_INIT = 0
 	NS_COUNT_INIT      = 0
 	AR_COUNT_INIT      = 0
 
