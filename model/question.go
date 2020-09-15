@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	IPV4_QUERY_TYPE = 1
+	HOST_QUERY_TYPE = 1
 	QUERY_PACK_NUM  = 2
 )
 
@@ -24,37 +24,37 @@ const (
   |                    QCLASS                     |
   +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
 */
-type DNSQuery struct {
+type DNSQuestion struct {
 	/* QNAME 8bit为单位表示的查询名(广泛的说就是：域名) */
 	QName string
 
-	/* QTYPE（2字节） */
+	/* QTYPE（2字节）查询的协议类型*/
 	QType int
 
-	/* QCLASS（2字节） */
+	/* QCLASS（2字节）查询的类,比如，IN代表Internet */
 	QClass int
 }
 
-func NewDNSQuery(QName string, QType int, QClass int) (dnsQuery *DNSQuery) {
-	dnsQuery = &DNSQuery{}
-	dnsQuery.QName, dnsQuery.QType, dnsQuery.QClass = QName, QType, QClass
-	return dnsQuery
+func NewDNSQuestion(QName string, QType int, QClass int) (dnsQuestion *DNSQuestion) {
+	dnsQuestion = &DNSQuestion{}
+	dnsQuestion.QName, dnsQuestion.QType, dnsQuestion.QClass = QName, QType, QClass
+	return dnsQuestion
 }
 
-func UnPackDNSQuery(data []byte) (dnsQuery *DNSQuery, err error) {
-	dnsQuery = &DNSQuery{}
+func UnPackDNSQuestion(data []byte) (dnsQuestion *DNSQuestion, err error) {
+	dnsQuestion = &DNSQuestion{}
 	nameLength := 0
-	nameLength, dnsQuery.QName = common.BytesToDomain(data)
+	nameLength, dnsQuestion.QName = common.BytesToDomain(data)
 	nums := common.UnPack(data[nameLength:])
 	if len(nums) < QUERY_PACK_NUM {
 		err = errors.New("dns query 解析失败")
 	}
-	dnsQuery.QType, dnsQuery.QClass = nums[0], nums[1]
-	return dnsQuery, err
+	dnsQuestion.QType, dnsQuestion.QClass = nums[0], nums[1]
+	return dnsQuestion, err
 }
 
-func (dnsQuery *DNSQuery) PackDNSQuery() (data []byte) {
-	data = append(data, common.DomainToBytes(dnsQuery.QName)...)
-	data = append(data, common.Pack(dnsQuery.QType, dnsQuery.QClass)...)
+func (dnsQuestion *DNSQuestion) PackDNSQuestion() (data []byte) {
+	data = append(data, common.DomainToBytes(dnsQuestion.QName)...)
+	data = append(data, common.Pack(dnsQuestion.QType, dnsQuestion.QClass)...)
 	return
 }

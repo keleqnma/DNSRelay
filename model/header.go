@@ -7,7 +7,7 @@ import (
 const (
 	HEADER_LENGTH   = 12
 	HEADER_PACK_NUM = 6
-	ERROR_FLAG      = 33155
+	FAIL_FLAG       = 33155
 	SUCCESS_FLAG    = 33152
 )
 
@@ -35,16 +35,16 @@ type DNSHeader struct {
 	/* Flags（2字节）*/
 	Flags int
 
-	/* QDCOUNT（2字节）*/
+	/* QDCOUNT（2字节）报文请求段中的问题记录数 */
 	QDCount int
 
-	/* ANCOUNT（2字节）*/
+	/* ANCOUNT（2字节）报文回答段中的回答记录数*/
 	ANCount int
 
-	/* NSCOUNT（2字节）*/
+	/* NSCOUNT（2字节）报文授权段中的授权记录数*/
 	NSCount int
 
-	/* ARCOUNT（2字节）*/
+	/* ARCOUNT（2字节）报文附加段中的附加记录数*/
 	ARCount int
 }
 

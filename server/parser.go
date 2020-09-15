@@ -13,7 +13,7 @@ type ParserServer struct {
 
 	dataReceived   []byte
 	headerReceived *model.DNSHeader
-	queryReceived  *model.DNSQuery
+	queryReceived  *model.DNSQuestion
 }
 
 func GetParserServer(data []byte, addr *net.UDPAddr) (*ParserServer, error) {
@@ -31,7 +31,7 @@ func (parserServer *ParserServer) parse() (err error) {
 		return
 	}
 
-	if parserServer.queryReceived, err = model.UnPackDNSQuery(parserServer.dataReceived[model.HEADER_LENGTH:]); err != nil {
+	if parserServer.queryReceived, err = model.UnPackDNSQuestion(parserServer.dataReceived[model.HEADER_LENGTH:]); err != nil {
 		log.Printf("Query unpacked failed : %v\n", err)
 		return
 	}
@@ -47,54 +47,43 @@ func (parserServer *ParserServer) parse() (err error) {
 
 func (parserServer *ParserServer) searchLocal() (ok bool) {
 	var (
-		respData      []byte
-		dnsHeaderResp *model.DNSHeader
-		dnsQueryResp  *model.DNSQuery
-		dnsRRResp     *model.DNSRR
+		respData        []byte
+		dnsHeaderResp   *model.DNSHeader
+		dnsQuestionResp *model.DNSQuestion
+		dnsAnswerResp   *model.DNSAnswer
 	)
 	log.Printf("Search local server for domian：%s\n", parserServer.queryReceived.QName)
 	ipSearch, ok := dnsServer.DomainMap[parserServer.queryReceived.QName]
-	if !ok || parserServer.queryReceived.QType != model.IPV4_QUERY_TYPE {
+	if !ok || parserServer.queryReceived.QType != model.HOST_QUERY_TYPE {
 		log.Printf("Search local server for domian：%s not found.\n", parserServer.queryReceived.QName)
 		ok = false
 		return
 	}
 
 	var flag int
-	var anCount int
 	if _, ok := dnsServer.BlockedIP[ipSearch]; ok {
-		flag = model.ERROR_FLAG
-		anCount = AN_FAIL_COUNT_INIT
+		flag = model.FAIL_FLAG
+		dnsHeaderResp = model.NewDNSHeader(parserServer.headerReceived.ID, flag, parserServer.headerReceived.QDCount, AN_FAIL_COUNT_INIT, NS_COUNT_INIT, AR_COUNT_INIT)
+		log.Printf("Search local server done. domian：%s，ip blocked：%s\n", parserServer.queryReceived.QName, ipSearch)
 	} else {
 		flag = model.SUCCESS_FLAG
-		anCount = AN_SUC_COUNT_INIT
+		dnsHeaderResp = model.NewDNSHeader(parserServer.headerReceived.ID, flag, parserServer.headerReceived.QDCount, AN_SUC_COUNT_INIT, NS_COUNT_INIT, AR_COUNT_INIT)
+		log.Printf("Search local server done. domian：%s，ip searched：%s\n", parserServer.queryReceived.QName, ipSearch)
 	}
-
-	dnsHeaderResp = model.NewDNSHeader(parserServer.headerReceived.ID, flag, parserServer.headerReceived.QDCount, anCount, NS_COUNT_INIT, AR_COUNT_INIT)
 	respData = append(respData, dnsHeaderResp.PackDNSHeader()...)
 
-	dnsQueryResp = parserServer.queryReceived
-	respData = append(respData, dnsQueryResp.PackDNSQuery()...)
+	dnsQuestionResp = parserServer.queryReceived
+	respData = append(respData, dnsQuestionResp.PackDNSQuestion()...)
 
-	if flag == model.SUCCESS_FLAG {
-		dnsRRResp = model.NewDNSRR(RR_NAME_INIT, parserServer.queryReceived.QType, parserServer.queryReceived.QClass, RR_TTL_INIT, RR_RD_LEN_INIT)
-		dnsRRResp.RData = ipSearch
-		dnsRRRespData, err := dnsRRResp.Pack()
-		if err != nil {
-			log.Printf("Invalid dnsRRResp format;%v", err)
-		}
-		respData = append(respData, dnsRRRespData...)
-		log.Printf("Search local server done. domian：%s，ip searched：%s\n", parserServer.queryReceived.QName, ipSearch)
-	} else {
-		log.Printf("Search local server done. domian：%s，ip blocked：%s\n", parserServer.queryReceived.QName, ipSearch)
-	}
+	dnsAnswerResp = model.NewDNSAnswer(ANSWER_NAME_INIT, parserServer.queryReceived.QType, parserServer.queryReceived.QClass, ANSWER_TTL_INIT, ANSWER_RD_LEN_INIT, ipSearch)
+	respData = append(respData, dnsAnswerResp.Pack()...)
 
 	code, err := GetDNSServer().socket.WriteToUDP(respData, parserServer.clientAddr)
 	log.Printf("Local search server send code:%v, data：%v", code, respData)
 	if err != nil {
 		log.Printf("Local server write error:%v, code %v \n", err, code)
 	}
-	return
+	return true
 }
 
 func (parserServer *ParserServer) searchInternet() {
@@ -107,7 +96,7 @@ func (parserServer *ParserServer) searchInternet() {
 
 	dstServer := &net.UDPAddr{
 		IP:   net.ParseIP(viper.GetString("dns_relay.trans_ip")),
-		Port: 53,
+		Port: DNS_PORT,
 	}
 	srcServer := &net.UDPAddr{IP: net.IPv4zero, Port: 0}
 
@@ -130,6 +119,10 @@ func (parserServer *ParserServer) searchInternet() {
 		return
 	}
 	dataTrans = dataTrans[:code]
+
+	if conn != nil {
+		defer conn.Close()
+	}
 
 	code, err = dnsServer.socket.WriteToUDP(dataTrans, parserServer.clientAddr)
 	if err != nil {

@@ -32,7 +32,7 @@ func GetDNSServer() *DNSServer {
 
 	dnsServer.socket, err = net.ListenUDP(UDP_NETWORK, &net.UDPAddr{
 		IP:   net.ParseIP(viper.GetString("dns_relay.client_ip")),
-		Port: 53,
+		Port: DNS_PORT,
 	})
 	if err != nil {
 		log.Printf("配置错误：%v", err)
@@ -59,8 +59,8 @@ func (dnsServer *DNSServer) Serve() {
 			continue
 		}
 		data = data[:read]
-		parserServer, err := GetParserServer(data, remoteAddr)
 		log.Println("接收数据成功", read, remoteAddr, data)
+		parserServer, err := GetParserServer(data, remoteAddr)
 		if err != nil {
 			log.Println(err)
 			continue
