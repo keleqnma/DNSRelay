@@ -92,8 +92,14 @@
 
 ![未命名文件](https://github.com/keleqnma/DNSRelay/blob/dev/images/%E6%9C%AA%E5%91%BD%E5%90%8D%E6%96%87%E4%BB%B6.png?raw=true?raw=true)
 
-#### 2.1.2 Bench测试
+#### 2.1.2 启动服务
+确保本地53端口没有被占用，可以用 `sudo lsof -i :53`查看53端口占用情况。
+随后在项目根目录下输入
+> make   
 
+![image-20200916155734639](https://github.com/keleqnma/DNSRelay/blob/dev/images/image-20200916155734639.png?raw=true)
+
+#### 2.1.3 Bench测试
 **Bench测试结果：**
 
 > 查询DNS中继服务 查询( 10000 )次 花费时间( 101 )秒
