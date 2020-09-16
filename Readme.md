@@ -1,5 +1,3 @@
-[TOC]
-
 ## 1 DNS协议
 
 ### 1.1 DNS packet组成
@@ -12,7 +10,7 @@
 
 ![img](http://www.tcpipguide.com/free/diagrams/dnsheaderformat.png)
 
-1. **会话标识（2字节）：**是DNS报文的ID标识，对于请求报文和其对应的应答报文，这个字段是相同的，通过它可以区分DNS应答报文是哪个请求的响应
+1. **会话标识（2字节）**：是DNS报文的ID标识，对于请求报文和其对应的应答报文，这个字段是相同的，通过它可以区分DNS应答报文是哪个请求的响应
 
 2. 标志（2字节）：
 
@@ -25,15 +23,15 @@
    | RA（1bit）     | 表示可用递归                                                 |
    | rcode（4bit）  | 表示返回码，0表示没有差错，3表示名字差错，2表示服务器错误（Server Failure） |
 
-3. **数量字段（总共8字节）：**Questions、Answer RRs、Authority RRs、Additional RRs 各自表示后面的四个区域的数目。Questions表示查询问题区域节的数量，Answers表示回答区域的数量，Authoritative namesversers表示授权区域的数量，Additional recoreds表示附加区域的数量
+3. **数量字段（总共8字节）**：Questions、Answer RRs、Authority RRs、Additional RRs 各自表示后面的四个区域的数目。Questions表示查询问题区域节的数量，Answers表示回答区域的数量，Authoritative namesversers表示授权区域的数量，Additional recoreds表示附加区域的数量
 
 #### 1.1.2 Question
 
 ![img](http://www.tcpipguide.com/free/diagrams/dnsquestionformat.png)
 
-1. **查询名：**长度不固定，且不使用填充字节，一般该字段表示的就是需要查询的域名
+1. **查询名**：长度不固定，且不使用填充字节，一般该字段表示的就是需要查询的域名
 
-2. **查询类型:**
+2. **查询类型**:
 
 | 类型 | 助记符 | 说明                                     |
 | ---- | ------ | ---------------------------------------- |
@@ -43,21 +41,21 @@
 | 12   | PTR    | 把IP地址转换成域名                       |
 | 28   | AAAA   | 由域名获得IPv6地址                       |
 
-3. **查询类：**通常为1，表明是Internet数据。
+3. **查询类**：通常为1，表明是Internet数据。
 
 #### 1.1.3 Answer
 
 ![img](http://www.tcpipguide.com/free/diagrams/dnsrrformat.png)
 
-**1. 域名（2字节或不定长）：**它的格式和Question区域的查询名字字段是一样的。
+1. **域名（2字节或不定长）**：它的格式和Question区域的查询名字字段是一样的。
 
-**2.  查询类型：**表明资源纪录的类型，见1.2节的查询类型表格所示 
+2. **查询类型**：表明资源纪录的类型，见1.2节的查询类型表格所示 
 
-**3. 查询类：**对于Internet信息，总是IN
+3. **查询类**：对于Internet信息，总是IN
 
-**4.  生存时间（TTL）：**以秒为单位，表示的是资源记录的生命周期，
+4. **生存时间（TTL）**：以秒为单位，表示的是资源记录的生命周期，
 
-**5. 资源数据：**该字段是一个可变长字段，表示按照查询段的要求返回的相关资源记录的数据。可以是Address（表明查询报文想要的回应是一个IP地址）或者CNAME（表明查询报文想要的回应是一个规范主机名）等。在本中继服务中，本地返回数据一律为Ipv4格式的地址，所以Answer长度固定为16字节。
+5. **资源数据**：该字段是一个可变长字段，表示按照查询段的要求返回的相关资源记录的数据。可以是Address（表明查询报文想要的回应是一个IP地址）或者CNAME（表明查询报文想要的回应是一个规范主机名）等。在本中继服务中，本地返回数据一律为Ipv4格式的地址，所以Answer长度固定为16字节。
 
 ### 1.2 实例
 
