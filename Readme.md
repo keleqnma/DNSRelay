@@ -93,6 +93,12 @@
 ![未命名文件](https://github.com/keleqnma/DNSRelay/blob/dev/images/%E6%9C%AA%E5%91%BD%E5%90%8D%E6%96%87%E4%BB%B6.png?raw=true?raw=true)
 
 #### 2.1.2 启动服务
+##### 2.1.2.1 Requirements
+Go version: >= 1.12
+Redis
+启动Redis服务，可以在conf.yaml配置文件中将redis配置改为你自己的，默认是127.0.0.1的6379端口。
+
+##### 2.1.2.2 启动
 确保本地53端口没有被占用，可以用 `sudo lsof -i :53`查看53端口占用情况。
 随后在项目根目录下输入
 > make   
