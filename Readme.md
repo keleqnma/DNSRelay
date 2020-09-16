@@ -2,13 +2,13 @@
 
 ### 1.1 DNS packet组成
 
-![img](http://www.tcpipguide.com/free/diagrams/dnsgenformat.png)
+![img](http://www.tcpipguide.com/free/diagrams/dnsgenformat.png?raw=true)
 
 
 
 #### 1.1.1 Header
 
-![img](http://www.tcpipguide.com/free/diagrams/dnsheaderformat.png)
+![img](http://www.tcpipguide.com/free/diagrams/dnsheaderformat.png?raw=true)
 
 1. **会话标识（2字节）**：是DNS报文的ID标识，对于请求报文和其对应的应答报文，这个字段是相同的，通过它可以区分DNS应答报文是哪个请求的响应
 
@@ -27,7 +27,7 @@
 
 #### 1.1.2 Question
 
-![img](http://www.tcpipguide.com/free/diagrams/dnsquestionformat.png)
+![img](http://www.tcpipguide.com/free/diagrams/dnsquestionformat.png?raw=true)
 
 1. **查询名**：长度不固定，且不使用填充字节，一般该字段表示的就是需要查询的域名
 
@@ -45,7 +45,7 @@
 
 #### 1.1.3 Answer
 
-![img](http://www.tcpipguide.com/free/diagrams/dnsrrformat.png)
+![img](http://www.tcpipguide.com/free/diagrams/dnsrrformat.png?raw=true)
 
 1. **域名（2字节或不定长）**：它的格式和Question区域的查询名字字段是一样的。
 
@@ -65,9 +65,9 @@
 
 随后本机53端口回复了一条长度为59 bytes *(Header length 12 bytes, Question length 15 bytes, 两个长度为16byte的answer)* 的结果数据。
 
-![image-20200914182431542](/Users/chenqiqi/Library/Application Support/typora-user-images/image-20200914182431542.png)
+![image-20200914182431542](https://github.com/keleqnma/DNSRelay/blob/dev/images/image-20200914182431542.png?raw=true)
 
-![image-20200914183320154](/Users/chenqiqi/Library/Application Support/typora-user-images/image-20200914183320154.png)
+![image-20200914183320154](https://github.com/keleqnma/DNSRelay/blob/dev/images/image-20200914183320154.png?raw=true)
 
 
 
@@ -75,7 +75,7 @@
 
 ### 2.1 整体架构
 
-![image-20200916144926577](/Users/chenqiqi/Library/Application Support/typora-user-images/image-20200916144926577.png)
+![image-20200916144926577](https://github.com/keleqnma/DNSRelay/blob/dev/images/image-20200916144926577.png?raw=true)
 
 >**Feature:**
 >
@@ -90,7 +90,7 @@
 
 这里用到Redis除了性能的考虑，也是因为域名-IP地址这种关系非常适合key-value这种数据。
 
-![未命名文件](/Users/chenqiqi/Downloads/未命名文件.png)
+![未命名文件](https://github.com/keleqnma/DNSRelay/blob/dev/images/%E6%9C%AA%E5%91%BD%E5%90%8D%E6%96%87%E4%BB%B6.png?raw=true?raw=true)
 
 #### 2.1.2 Bench测试
 
@@ -113,15 +113,15 @@ Bench测试参数说明：
 > 1. 本地查询仅支持Ipv4格式。
 > 2. 支持多条查询结果。
 
-![image-20200916115152839](/Users/chenqiqi/Library/Application Support/typora-user-images/image-20200916115152839.png)
+![image-20200916115152839](https://github.com/keleqnma/DNSRelay/blob/dev/images/image-20200916115152839.png?raw=true?raw=true)
 
 使用Nslookup 指令在127.0.0.1服务器上查询baidu.com域名，收到回复。
 
-![image-20200916115217137](/Users/chenqiqi/Library/Application Support/typora-user-images/image-20200916115217137.png)
+![image-20200916115217137](https://github.com/keleqnma/DNSRelay/blob/dev/images/image-20200916115217137.png?raw=true)
 
 使用tcpdump监听本机53端口上的dns查询操作，可以看到Nslookup指令向本机53端口上发送了一条长度为27的查询域名数据，随后本机53端口回复了一条长度为59的结果数据。
 
-![image-20200916115246039](/Users/chenqiqi/Library/Application Support/typora-user-images/image-20200916115246039.png)
+![image-20200916115246039](https://github.com/keleqnma/DNSRelay/blob/dev/images/image-20200916115246039.png?raw=true)
 
 下面是本DNS中继服务的运行日志，可以看到本地搜索到该域名共对应两条ip结果，随后中继服务将查询结果打包发回。
 
@@ -133,37 +133,37 @@ Bench测试参数说明：
 >
 > 2. 转发查询和本地查询的结果IP都可以屏蔽
 
-![image-20200916115732742](/Users/chenqiqi/Library/Application Support/typora-user-images/image-20200916115732742.png)
+![image-20200916115732742](https://github.com/keleqnma/DNSRelay/blob/dev/images/image-20200916115732742.png?raw=true)
 
-![image-20200916115646332](/Users/chenqiqi/Library/Application Support/typora-user-images/image-20200916115646332.png)
+![image-20200916115646332](https://github.com/keleqnma/DNSRelay/blob/dev/images/image-20200916115646332.png?raw=true)
 
 屏蔽IP写入配置文件，中继服务初始化时会读取配置文件并输出日志。
 
 #### 2.3.1 转发查询屏蔽
 
-![image-20200916121302062](/Users/chenqiqi/Library/Application Support/typora-user-images/image-20200916121302062.png)
+![image-20200916121302062](https://github.com/keleqnma/DNSRelay/blob/dev/images/image-20200916121302062.png?raw=true)
 
 使用Nslookup 指令在127.0.0.1服务器上查询alimama.com域名。
 
-![image-20200916121322559](/Users/chenqiqi/Library/Application Support/typora-user-images/image-20200916121322559.png)
+![image-20200916121322559](https://github.com/keleqnma/DNSRelay/blob/dev/images/image-20200916121322559.png?raw=true)
 
 根据中继服务服务日志可以看到，服务在本地没有搜索到alimama.com域名的解析结果，于是转发查询，解析转发查询结果发现其中有一个查询结果ip在本地的屏蔽列表中，于是对这条查询进行屏蔽处理。
 
-![image-20200916121348102](/Users/chenqiqi/Library/Application Support/typora-user-images/image-20200916121348102.png)
+![image-20200916121348102](https://github.com/keleqnma/DNSRelay/blob/dev/images/image-20200916121348102.png?raw=true)
 
 
 
 #### 2.3.2 本地查询屏蔽
 
-![image-20200916121428061](/Users/chenqiqi/Library/Application Support/typora-user-images/image-20200916121428061.png)
+![image-20200916121428061](https://github.com/keleqnma/DNSRelay/blob/dev/images/image-20200916121428061.png?raw=true)
 
 使用Nslookup 指令在127.0.0.1服务器上查询test.com域名。
 
-![image-20200916121442117](/Users/chenqiqi/Library/Application Support/typora-user-images/image-20200916121442117.png)
+![image-20200916121442117](https://github.com/keleqnma/DNSRelay/blob/dev/images/image-20200916121442117.png?raw=true)
 
 根据中继服务服务日志可以看到，服务在本地查询到了test.com域名的解析结果，发现其中有一个查询结果ip在本地的屏蔽列表中，于是对这条查询进行屏蔽处理。
 
-![image-20200916121455045](/Users/chenqiqi/Library/Application Support/typora-user-images/image-20200916121455045.png)
+![image-20200916121455045](https://github.com/keleqnma/DNSRelay/blob/dev/images/image-20200916121455045.png?raw=true)
 
 
 
@@ -175,31 +175,31 @@ Bench测试参数说明：
 
 **第一次查询：**
 
-![image-20200916124949242](/Users/chenqiqi/Library/Application Support/typora-user-images/image-20200916124949242.png)
+![image-20200916124949242](https://github.com/keleqnma/DNSRelay/blob/dev/images/image-20200916124949242.png?raw=true)
 
 使用Nslookup 指令在127.0.0.1服务器上查询youtube.com域名。
 
-![image-20200916125003267](/Users/chenqiqi/Library/Application Support/typora-user-images/image-20200916125003267.png)
+![image-20200916125003267](https://github.com/keleqnma/DNSRelay/blob/dev/images/image-20200916125003267.png?raw=true)
 
 根据中继服务服务日志可以看到，服务在本地没有搜索到youtube.com域名的解析结果，于是转发查询，将查询结果加载到本地Redis数缓存。
 
-![image-20200916125734074](/Users/chenqiqi/Library/Application Support/typora-user-images/image-20200916125734074.png)
+![image-20200916125734074](https://github.com/keleqnma/DNSRelay/blob/dev/images/image-20200916125734074.png?raw=true)
 
 加载缓存后，中继服务返回查询数据。
 
-![image-20200916125019489](/Users/chenqiqi/Library/Application Support/typora-user-images/image-20200916125019489.png)
+![image-20200916125019489](https://github.com/keleqnma/DNSRelay/blob/dev/images/image-20200916125019489.png?raw=true)
 
 **第二次查询：**
 
-![image-20200916125041605](/Users/chenqiqi/Library/Application Support/typora-user-images/image-20200916125041605.png)
+![image-20200916125041605](https://github.com/keleqnma/DNSRelay/blob/dev/images/image-20200916125041605.png?raw=true)
 
 使用Nslookup 指令在127.0.0.1服务器上查询youtube.com域名。
 
-![image-20200916125521598](/Users/chenqiqi/Library/Application Support/typora-user-images/image-20200916125521598.png)
+![image-20200916125521598](https://github.com/keleqnma/DNSRelay/blob/dev/images/image-20200916125521598.png?raw=true)
 
 根据中继服务服务日志可以看到，服务在本地没有查询到到了youtube.com域名的解析结果（上次加载进来的），于是打包返回。
 
-![image-20200916125448416](/Users/chenqiqi/Library/Application Support/typora-user-images/image-20200916125448416.png)
+![image-20200916125448416](https://github.com/keleqnma/DNSRelay/blob/dev/images/image-20200916125448416.png?raw=true)
 
 
 
