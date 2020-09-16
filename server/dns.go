@@ -26,7 +26,9 @@ func GetDNSServer() *DNSServer {
 		Addr: viper.GetString("redisConfig.addr"),
 		DB:   0,
 	})
-	dnsServer = &DNSServer{RedisClient: redisClient}
+	dnsServer = &DNSServer{
+		RedisClient: redisClient,
+	}
 	blockedIPs := viper.GetStringSlice("blocked_ip")
 	for index := range blockedIPs {
 		dnsServer.BlockedIP.Store(blockedIPs[index], struct{}{})
