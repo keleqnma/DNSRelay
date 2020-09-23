@@ -3,8 +3,10 @@ package server
 import (
 	"context"
 	"log"
+	"math"
 	"net"
 	"strconv"
+	"time"
 
 	"dnsrelay.com/v1/common"
 	"dnsrelay.com/v1/model"
@@ -142,8 +144,13 @@ func (parserServer *ParserServer) searchInternet() {
 		sendSize := len(parserServer.dataReceived)
 		dataTrans = dataTrans[sendSize:]
 		var values []string
+		minTTL := math.MaxInt64
 
 		for num := 0; num < answerNums && len(dataTrans) >= model.IPV4_ANSWER_LEANGTH; num++ {
+			if ttl := common.Bytes4ToInt(dataTrans[6:10]); ttl < minTTL {
+				minTTL = ttl
+			}
+
 			dataTrans = dataTrans[(model.IPV4_ANSWER_LEANGTH - model.IPV4_RDATA_LENGTH):]
 			var ip string
 			for index := 0; index < model.IPV4_RDATA_LENGTH; index++ {
@@ -161,10 +168,11 @@ func (parserServer *ParserServer) searchInternet() {
 			dataTrans = dataTrans[model.IPV4_RDATA_LENGTH:]
 		}
 
-		if len(values) > 0 {
+		if len(values) > 0 && minTTL > 0 {
 			if dnsServer.RedisClient.SAdd(ctx, key, values).Err() != nil {
 				log.Printf("write to local database error: %v.", err)
 			} else {
+				dnsServer.RedisClient.Expire(ctx, key, time.Duration(minTTL)*time.Second)
 				log.Printf("write to local database success, domain:%v, ips:%v.", parserServer.queryReceived.QName, values)
 			}
 		}

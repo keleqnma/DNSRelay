@@ -20,7 +20,7 @@ func UnPack(data []byte) []int {
 	ret := []int{}
 	remainLen := len(data)
 	for remainLen >= 2 {
-		ret = append(ret, BytesToInt(data[0:2]))
+		ret = append(ret, Bytes2ToInt(data[0:2]))
 		remainLen -= 2
 		data = data[2:]
 	}
@@ -45,10 +45,18 @@ func IntToBytes2(num int) []byte {
 	return res
 }
 
-func BytesToInt(b []byte) int {
+func Bytes2ToInt(b []byte) int {
 	byte1 := int(b[0]&0xff) << 8
 	byte2 := int(b[1] & 0xff)
 	return byte1 | byte2
+}
+
+func Bytes4ToInt(b []byte) int {
+	byte1 := int(b[0]&0xff) << 24
+	byte2 := int(b[1]&0xff) << 16
+	byte3 := int(b[2]&0xff) << 8
+	byte4 := int(b[3] & 0xff)
+	return byte1 | byte2 | byte3 | byte4
 }
 
 func DomainToBytes(domain string) []byte {
